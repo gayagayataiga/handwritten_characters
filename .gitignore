@@ -27,3 +27,9 @@
 !hiragana/
 !hiragana/*/
 !hiragana/*/*.json
+
+!templates/
+!templates/*.html
+
+!参考文献/
+!参考文献/*.pdf
