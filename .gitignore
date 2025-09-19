@@ -25,3 +25,5 @@
 
 # Allow dataset folder
 !hiragana/
+!hiragana/*/
+!hiragana/*/*.json
