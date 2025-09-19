@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 	<meta charset="UTF-8">
-	<title>手書きひらがな収集</title>
+	<title>手書き文字収集</title>
 	<style>
 		#canvas {
 			border: 1px solid black;
@@ -11,121 +11,143 @@
 	</style>
 </head>
 <body>
-	<h1>手書きひらがな収集</h1>
+	<h1>手書き文字収集</h1>
 	<!-- プルダウン -->
-	<label for="charSelect">文字を選択:</label>
-	<select id="charSelect"></select>
+	<label>モード: 
+    <select id="modeSelect">
+      <option value="single">1文字モード</option>
+      <option value="random5">ランダムモード</option>
+    </select>
+  </label>
+  <br>
+
+  <!-- 文字選択 -->
+  <label>文字: 
+    <select id="charSelect"></select>
+  </label>
+  <br>
+
 	<canvas id="canvas" width="300" height="300"></canvas><br>
 	<button id="saveBtn">保存</button>
 	<script>
 		// ひらがなセット
-		const hiraganaSet = [
-			"あ", "い", "う", "え", "お",
-			"か", "き", "く", "け", "こ",
-			"さ", "し", "す", "せ", "そ",
-			"た", "ち", "つ", "て", "と",
-			"な", "に", "ぬ", "ね", "の",
-			"は", "ひ", "ふ", "へ", "ほ",
-			"ま", "み", "む", "め", "も",
-			"や", "ゆ", "よ",
-			"ら", "り", "る", "れ", "ろ",
-			"わ", "を", "ん"
-		];
-		const select = document.getElementById("charSelect");
-		hiraganaSet.forEach(c => {
-			const option = document.createElement("option");
-			option.value = c;
-			option.textContent = c;
-			select.appendChild(option);
-		});
-		const canvas = document.getElementById("canvas");
-		const ctx = canvas.getContext("2d");
-		let drawing = false;
-		let strokes = [];
-		let currentStroke = [];
-		let currentIndex = 0;
+  const kanaSet = [
+    "あ","い","う","え","お","か","き","く","け","こ",
+    "さ","し","す","せ","そ","た","ち","つ","て","と",
+    "な","に","ぬ","ね","の","は","ひ","ふ","へ","ほ",
+    "ま","み","む","め","も","や","ゆ","よ","ら","り",
+    "る","れ","ろ","わ","を","ん",
+    "ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ",
+    "サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト",
+    "ナ","ニ","ヌ","ネ","ノ","ハ","ヒ","フ","ヘ","ホ",
+    "マ","ミ","ム","メ","モ","ヤ","ユ","ヨ","ラ","リ",
+    "ル","レ","ロ","ワ","ヲ","ン"
+  ];
+ const modeSelect = document.getElementById("modeSelect");
+  const charSelect = document.getElementById("charSelect");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
 
-		function getPos(e) {
-			const rect = canvas.getBoundingClientRect();
-			const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-			const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-			return { x: clientX - rect.left, y: clientY - rect.top };
-		}
+  let drawing = false;
+  let strokes = [];
+  let currentStroke = [];
 
-		function startDrawing(e) {
-			drawing = true;
-			currentStroke = [];
-			ctx.beginPath();
-			const { x, y } = getPos(e);
-			ctx.moveTo(x, y);
-			currentStroke.push({ x, y });
-		}
+  // 位置取得
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
 
-		function draw(e) {
-			if (!drawing) return;
-			const { x, y } = getPos(e);
-			ctx.lineTo(x, y);
-			ctx.stroke();
-			currentStroke.push({ x, y });
-		}
+  // 描画開始
+  function startDrawing(e) {
+    drawing = true;
+    currentStroke = [];
+    strokes.push(currentStroke);
 
-		function endDrawing() {
-			if (drawing) {
-				drawing = false;
-				strokes.push(currentStroke);
-			}
-		}
+    const { x, y } = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    currentStroke.push({ x, y });
+  }
 
-		// イベント設定
-		canvas.addEventListener("mousedown", startDrawing);
-		canvas.addEventListener("mousemove", draw);
-		canvas.addEventListener("mouseup", endDrawing);
-		canvas.addEventListener("mouseleave", endDrawing);
-		canvas.addEventListener("touchstart", startDrawing);
-		canvas.addEventListener("touchmove", draw);
-		canvas.addEventListener("touchend", endDrawing);
+  // 描画中
+  function draw(e) {
+    if (!drawing) return;
+    const { x, y } = getPos(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    currentStroke.push({ x, y });
+  }
 
-		// 保存して次へ
-		document.getElementById("saveBtn").onclick = () => {
-			const char = select.value;
-			// JSONに変換
-			const jsonData = JSON.stringify({ char: char, strokes: strokes }, null, 2);
-			const jsonBlob = new Blob([jsonData], { type: "application/json" });
-			const url = URL.createObjectURL(jsonBlob);
+  // 描画終了
+  function endDrawing() {
+    drawing = false;
+  }
 
-			// 現在時刻を取得してファイル名にする
-			const now = new Date();
-			const timestamp = now.getFullYear().toString()
-				+ String(now.getMonth() + 1).padStart(2, '0')
-				+ String(now.getDate()).padStart(2, '0')
-				+ '_'
-				+ String(now.getHours()).padStart(2, '0')
-				+ String(now.getMinutes()).padStart(2, '0')
-				+ String(now.getSeconds()).padStart(2, '0');
+  // Pointer Events
+  canvas.addEventListener("pointerdown", startDrawing);
+  canvas.addEventListener("pointermove", draw);
+  canvas.addEventListener("pointerup", endDrawing);
+  canvas.addEventListener("pointerleave", endDrawing);
 
-			const filename = `${char}_${timestamp}.json`; // 例: あ_20250919_091530.json
+  // ランダムにn個選ぶ関数
+  function getRandomChars(n) {
+    const shuffled = [...kanaSet].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, n);
+  }
 
-			// ダウンロード
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = filename;
-			a.click();
+  // プルダウン更新
+  function updateCharSelect() {
+    charSelect.innerHTML = "";
+    let chars;
+    if (modeSelect.value === "single") {
+      chars = kanaSet; // 全文字
+    } else {
+      chars = getRandomChars(5); // ランダム5文字
+    }
+    chars.forEach(c => {
+      const option = document.createElement("option");
+      option.value = c;
+      option.textContent = c;
+      charSelect.appendChild(option);
+    });
+  }
 
-			window.location.reload();
+  // モード変更で更新
+  modeSelect.addEventListener("change", updateCharSelect);
 
-			// 次の文字へ
-			currentIndex++;
-			if (currentIndex < hiraganaSet.length) {
-				document.getElementById("target-char").textContent = hiraganaSet[currentIndex];
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
-				strokes = [];
-			} else {
-				alert("全46文字の収集が完了しました！");
-			}
-		};
+  // 保存ボタン
+  document.getElementById("saveBtn").onclick = () => {
+    const char = charSelect.value;
 
+    // JSON作成
+    const jsonData = JSON.stringify({ char: char, strokes: strokes }, null, 2);
+    const blob = new Blob([jsonData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
 
+    // ファイル名
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[-:T]/g, "").split(".")[0];
+    const filename = `${char}_${timestamp}.json`;
 
-	</script>
+    // ダウンロード
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    // キャンバスリセット
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes = [];
+
+    // 5文字モードなら次の5文字を更新
+    if (modeSelect.value === "random5") {
+      updateCharSelect();
+    }
+  };
+
+  // 初期表示
+  updateCharSelect();
+  </script>
 </body>
 </html>
