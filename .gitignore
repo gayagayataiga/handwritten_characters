@@ -33,3 +33,7 @@
 
 !参考文献/
 !参考文献/*.pdf
+
+!generated_samples/
+!generated_samples/*.png
+!generated_samples/*.json
