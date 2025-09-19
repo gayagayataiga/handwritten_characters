@@ -12,9 +12,11 @@
 </head>
 <body>
 	<h1>手書きひらがな収集</h1>
-	<div id="target-char" style="font-size:2em;">あ</div>
+	<!-- プルダウン -->
+	<label for="charSelect">文字を選択:</label>
+	<select id="charSelect"></select>
 	<canvas id="canvas" width="300" height="300"></canvas><br>
-	<button id="saveBtn">保存して次へ</button>
+	<button id="saveBtn">保存</button>
 	<script>
 		// ひらがなセット
 		const hiraganaSet = [
@@ -29,7 +31,13 @@
 			"ら", "り", "る", "れ", "ろ",
 			"わ", "を", "ん"
 		];
-
+		const select = document.getElementById("charSelect");
+		hiraganaSet.forEach(c => {
+			const option = document.createElement("option");
+			option.value = c;
+			option.textContent = c;
+			select.appendChild(option);
+		});
 		const canvas = document.getElementById("canvas");
 		const ctx = canvas.getContext("2d");
 		let drawing = false;
@@ -79,18 +87,31 @@
 
 		// 保存して次へ
 		document.getElementById("saveBtn").onclick = () => {
-			const char = hiraganaSet[currentIndex];
-
+			const char = select.value;
 			// JSONに変換
 			const jsonData = JSON.stringify({ char: char, strokes: strokes }, null, 2);
 			const jsonBlob = new Blob([jsonData], { type: "application/json" });
 			const url = URL.createObjectURL(jsonBlob);
 
+			// 現在時刻を取得してファイル名にする
+			const now = new Date();
+			const timestamp = now.getFullYear().toString()
+				+ String(now.getMonth() + 1).padStart(2, '0')
+				+ String(now.getDate()).padStart(2, '0')
+				+ '_'
+				+ String(now.getHours()).padStart(2, '0')
+				+ String(now.getMinutes()).padStart(2, '0')
+				+ String(now.getSeconds()).padStart(2, '0');
+
+			const filename = `${char}_${timestamp}.json`; // 例: あ_20250919_091530.json
+
 			// ダウンロード
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = `${char}.json`;  // 例: あ.json
+			a.download = filename;
 			a.click();
+
+			window.location.reload();
 
 			// 次の文字へ
 			currentIndex++;
@@ -102,6 +123,9 @@
 				alert("全46文字の収集が完了しました！");
 			}
 		};
+
+
+
 	</script>
 </body>
 </html>
