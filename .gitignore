@@ -1,0 +1,27 @@
+# Ignore everything by default
+*
+
+# Allow source code
+!*.py
+!*.js
+!*.html
+!*.css
+
+# Allow configs and docs
+!*.json
+!*.md
+!*.txt
+!requirements.txt
+!package.json
+!package-lock.json
+!yarn.lock
+
+# Allow .gitignore itself
+!/.gitignore
+
+# Allow source folders
+!src/
+!public/
+
+# Allow dataset folder
+!hiragana/
