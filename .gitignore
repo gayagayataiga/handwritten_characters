@@ -40,3 +40,6 @@
 
 !sentences/
 !sentences/*.json
+
+!processed_json/
+!processed_json/*.json
