@@ -10,7 +10,7 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index-sentence.html")
 
 @app.route("/save", methods=["POST"])
 def save():

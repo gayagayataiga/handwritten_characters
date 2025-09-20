@@ -37,3 +37,6 @@
 !generated_samples/
 !generated_samples/*.png
 !generated_samples/*.json
+
+!sentences/
+!sentences/*.json
