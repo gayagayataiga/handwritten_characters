@@ -17,7 +17,7 @@ class HandwritingTransformer(nn.Module):
         # --- Encoder（テキスト側） ---
         self.text_embedding = nn.Embedding(vocab_size, d_model)
         # 位置エンコーディングは学習可能なパラメータとして定義
-        self.pos_encoder = nn.Embedding(500, d_model)  # 最大テキスト長50
+        self.pos_encoder = nn.Embedding(5000, d_model)  # 最大テキスト長50
 
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward=512, dropout=dropout, batch_first=True)
         self.text_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
@@ -25,7 +25,7 @@ class HandwritingTransformer(nn.Module):
         # --- Decoder（ストローク側） ---
         self.stroke_embedding = nn.Linear(3, d_model)  # (dx, dy, end) → d_model
         # 位置エンコーディングは学習可能なパラメータとして定義
-        self.pos_decoder = nn.Embedding(1000, d_model) # 最大ストローク長100
+        self.pos_decoder = nn.Embedding(10000, d_model) # 最大ストローク長100
 
         decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward=512, dropout=dropout, batch_first=True)
         self.stroke_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
@@ -87,7 +87,7 @@ def compute_loss(dxdy_pred, end_pred, seq_gt, mask):
     end_gt = seq_gt[:, :, 2].long()
 
     # マスクを適用して有効な要素のみを選択
-    mask_expanded = mask.unsqueeze(-1).expand_as(dxdy_pred)
+    mask_expanded = (mask).unsqueeze(-1).expand_as(dxdy_pred)
     
     # Δx, Δy: MSE Loss
     mse_loss = nn.MSELoss(reduction='none')(dxdy_pred, dxdy_gt)
@@ -126,6 +126,11 @@ def train_model(model, dataloader, epochs=50, lr=1e-4, device="cuda"):
             # 教師データは最初の点を抜く
             target_seq = seq[:, 1:]
             target_mask = seq_mask[:, 1:]
+
+            if target_seq.shape[1] == 0:
+                # 有効なターゲットがない場合、このバッチはスキップ
+                print("Skipping a batch with no valid targets.")
+                continue
 
             dxdy_pred, end_pred = model(text_ids, decoder_input_seq, text_mask=text_mask)
 
@@ -343,8 +348,8 @@ if __name__ == "__main__":
     NHEAD = 4
     NUM_LAYERS = 2
     DROPOUT = 0.1
-    EPOCHS = 1000
-    LR = 0.001
+    EPOCHS = 100
+    LR = 0.01
     BATCH_SIZE = 8
     # --- データ準備 ---
 

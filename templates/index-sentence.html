@@ -33,11 +33,20 @@
 <textarea id="sentence"></textarea>
 
 <script>
-document.getElementById("random-btn").addEventListener("click", async () => {
-    const res = await fetch("/random_sentence");
-    const data = await res.json();
-    document.getElementById("sentence").value = data.sentence;
-});
+// --- ランダム文章取得の修正 ---
+    document.getElementById("random-btn").addEventListener("click", async () => {
+      try {
+        const res = await fetch("/random_sentence");
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        document.getElementById("textInput").value = data.sentence; 
+      } catch (error) {
+        console.error("ランダムな文章の取得に失敗しました:", error);
+        alert("ランダムな文章の取得に失敗しました。");
+      }
+    });
 </script>
 
   <br>
