@@ -1,7 +1,16 @@
 from flask import Flask, request, render_template, jsonify
 import os
 import json
-# datetimeは不要になるので削除してもOK
+import random
+
+RANDOM_SENTENCES = [
+    "今日はいい天気です。",
+    "明日は雨が降るかもしれません。",
+    "プログラミングは楽しいです。",
+    "ランダム文章モードをテスト中。",
+    "AIと一緒に学習しています。"
+]
+
 
 app = Flask(__name__)
 
@@ -43,6 +52,11 @@ def save():
         # 保存中にエラーが起きた場合
         print(f"Error saving file: {e}")
         return jsonify({"status": "error", "message": "Failed to save file on server"}), 500
+
+@app.route("/random_sentence", methods=["GET"])
+def random_sentence():
+    sentence = random.choice(RANDOM_SENTENCES)
+    return jsonify({"sentence": sentence})
 
 
 if __name__ == "__main__":

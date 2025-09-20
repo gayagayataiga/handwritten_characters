@@ -43,3 +43,9 @@
 
 !processed_json/
 !processed_json/*.json
+
+!modelCodes/
+!modelCodes/*.py
+
+!outputs/
+!outputs/*.json

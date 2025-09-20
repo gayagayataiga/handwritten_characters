@@ -28,6 +28,18 @@
 
   <label for="textInput">収集する文章: </label><br>
   <input type="text" id="textInput" placeholder="例: 今日は良い天気ですね">
+  
+  <button id="random-btn">ランダム文章を取得</button>
+<textarea id="sentence"></textarea>
+
+<script>
+document.getElementById("random-btn").addEventListener("click", async () => {
+    const res = await fetch("/random_sentence");
+    const data = await res.json();
+    document.getElementById("sentence").value = data.sentence;
+});
+</script>
+
   <br>
 
   <canvas id="canvas" width="800" height="300"></canvas><br>

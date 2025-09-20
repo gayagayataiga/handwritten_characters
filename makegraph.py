@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 # フォルダパス
-folder = "hiragana/あ"
+folder = "sentences"
 
 # 色を決める（ストロークごとにループ）
 colors = ['red', 'red', 'red', 'orange', 'purple']
