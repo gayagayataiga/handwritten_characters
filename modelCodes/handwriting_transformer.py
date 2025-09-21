@@ -294,8 +294,8 @@ def plot_from_file(filepath):
 # 5. メイン実行ブロック
 # ===================================================================
 if __name__ == "__main__":
-    D_MODEL, NHEAD, NUM_LAYERS = 256, 4, 4
-    DROPOUT, EPOCHS, LR, BATCH_SIZE = 0.1, 150, 0.0005, 32
+    D_MODEL, NHEAD, NUM_LAYERS = 256, 4, 6
+    DROPOUT, EPOCHS, LR, BATCH_SIZE = 0.1, 300, 0.0005, 32
     
     device = "cuda" if torch.cuda.is_available() else "cpu"; print(f"Using device: {device}")
     

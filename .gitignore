@@ -49,3 +49,11 @@
 
 !outputs/
 !outputs/*.json
+
+!normalized_sentences/
+!normalized_sentences/*.json
+
+!checkModels/
+!checkModels/*.py
+
+!*.pth
