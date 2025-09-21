@@ -252,6 +252,8 @@ def load_dataset_from_directory(directory_path):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f: data = json.load(f)
                 text, strokes = data.get('text'), data.get('sequence')
+                # ここでsequenceが(x,y,end)のリストであることを確認
+                # もしくはstrokesが(x,y)のリストでendは0で補完されている場合も考慮
                 if text is not None and strokes is not None:
                     dataset.append((text, [tuple(p) for p in strokes]))
             except Exception as e: print(f"Could not load/parse {filename}: {e}")
@@ -298,8 +300,8 @@ if __name__ == "__main__":
     DROPOUT, EPOCHS, LR, BATCH_SIZE = 0.1, 300, 0.0005, 32
     
     device = "cuda" if torch.cuda.is_available() else "cpu"; print(f"Using device: {device}")
-    
-    DATA_DIRECTORY = "processed_json"
+
+    DATA_DIRECTORY = "processed_json" # 正規化済みデータフォルダ
     my_data = load_dataset_from_directory(DATA_DIRECTORY)
     if not my_data: print("No data found. Exiting."); exit()
 
