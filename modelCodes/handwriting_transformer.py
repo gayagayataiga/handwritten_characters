@@ -301,7 +301,7 @@ if __name__ == "__main__":
     
     device = "cuda" if torch.cuda.is_available() else "cpu"; print(f"Using device: {device}")
 
-    DATA_DIRECTORY = "processed_json" # 正規化済みデータフォルダ
+    DATA_DIRECTORY = "dxdy_normalized_sentences" # 正規化済みデータフォルダ
     my_data = load_dataset_from_directory(DATA_DIRECTORY)
     if not my_data: print("No data found. Exiting."); exit()
 

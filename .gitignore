@@ -57,3 +57,17 @@
 !checkModels/*.py
 
 !*.pth
+
+!checkModels/
+!checkModels/*.py
+
+!copied_sentences/
+!copied_sentences/*.json
+
+!dxdy_normalized_sentences/
+!dxdy_normalized_sentences/*.json
+!dxdy_normalized_sentences/*.py
+
+!sequence_sentences/
+!sequence_sentences/*.json
+!sequence_sentences/*.py

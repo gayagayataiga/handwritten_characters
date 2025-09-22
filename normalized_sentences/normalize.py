@@ -4,7 +4,6 @@ import numpy as np
 
 def normalize_strokes(strokes):
     """strokes全体をまとめてmin-max正規化 (0〜1)、x,yのみ"""
-    # すべての (x,y) を収集
     all_points = []
     for stroke in strokes:
         for pt in stroke:
@@ -24,13 +23,17 @@ def normalize_strokes(strokes):
         new_stroke = []
         for pt in stroke:
             x, y = norm_arr[idx]
-            new_stroke.append({"x": x, "y": y})
+            new_stroke.append({"x": float(x), "y": float(y)})
             idx += 1
         result.append(new_stroke)
     
     return result
 
-def normalize_json_folder(input_dir, output_dir):
+def process_json_folder(input_dir, output_dir, normalize=False):
+    """
+    input_dir の JSON を output_dir にコピーする。
+    normalize=True の場合は strokes を正規化して保存。
+    """
     os.makedirs(output_dir, exist_ok=True)
     for filename in os.listdir(input_dir):
         if filename.endswith(".json"):
@@ -40,15 +43,22 @@ def normalize_json_folder(input_dir, output_dir):
             with open(input_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             
-            if "strokes" in data:
+            if normalize and "strokes" in data:
                 data["strokes"] = normalize_strokes(data["strokes"])
             
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
-            print(f"{filename} を正規化して {output_path} に保存しました")
+            mode = "正規化" if normalize else "コピー"
+            print(f"{filename} を{mode}して {output_path} に保存しました")
 
 # ===== 使用例 =====
-input_dir = "sentences"       # 元のjsonフォルダ
-output_dir = "normalized_sentences" # 保存先フォルダ
-normalize_json_folder(input_dir, output_dir)
+input_dir = "sentences"             # 元のjsonフォルダ
+output_dir_raw = "copied_sentences" # コピーのみ
+output_dir_norm = "normalized_sentences" # 正規化して保存
+
+# コピーするだけ
+process_json_folder(input_dir, output_dir_raw, normalize=False)
+
+# 正規化して保存
+process_json_folder(input_dir, output_dir_norm, normalize=True)
