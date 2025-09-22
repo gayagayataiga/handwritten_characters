@@ -49,6 +49,7 @@
 
 !outputs/
 !outputs/*.json
+!outputs/*.png
 
 !normalized_sentences/
 !normalized_sentences/*.json
@@ -58,8 +59,8 @@
 
 !*.pth
 
-!checkModels/
-!checkModels/*.py
+!checkModel/
+!checkModel/*.py
 
 !copied_sentences/
 !copied_sentences/*.json

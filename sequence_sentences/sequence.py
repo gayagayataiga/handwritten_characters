@@ -12,7 +12,7 @@ def strokes_to_sequence(strokes):
     for stroke in strokes:
         for i, pt in enumerate(stroke):
             x, y = pt["x"], pt["y"]
-            pen = 0 if i == len(stroke) - 1 else 1
+            pen = 1 if i == len(stroke) - 1 else 0
             seq.append([float(x), float(y), pen])
     return seq
 
