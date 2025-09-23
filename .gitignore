@@ -72,3 +72,14 @@
 !sequence_sentences/
 !sequence_sentences/*.json
 !sequence_sentences/*.py
+
+# 4dim
+
+!sentences-4dim/
+!sentences-4dim/*.json
+!sentences-4dim/changed_name/
+!sentences-4dim/changed_name/*.py
+!sentences-4dim/changed_name/*.json
+!sentences-4dim/normalized_xy/
+!sentences-4dim/normalized_xy/*.py
+!sentences-4dim/normalized_xy/*.json

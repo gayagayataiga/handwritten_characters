@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>手書き文章収集 (4次元データ)</title>
+	<style>
+		body {
+			font-family: sans-serif;
+		}
+
+		#canvas {
+			border: 1px solid black;
+			background: white;
+			touch-action: none;
+			/* タッチスクリーンでのスクロール防止 */
+		}
+
+		#textInput {
+			width: 400px;
+			padding: 5px;
+			margin-bottom: 10px;
+		}
+
+		button {
+			padding: 8px 15px;
+			margin-top: 5px;
+		}
+	</style>
+</head>
+<body>
+	<h1>手書き文章収集 (4次元データ)</h1>
+	<label for="textInput">収集する文章: </label><br>
+	<input type="text" id="textInput" placeholder="例: 今日は良い天気ですね">
+	<button id="random-btn">ランダム文章を取得</button>
+	<script>
+		document.getElementById("random-btn").addEventListener("click", async () => {
+			try {
+				const res = await fetch("/random_sentence");
+				if (!res.ok) {
+					throw new Error(`HTTP error! status: ${res.status}`);
+				}
+				const data = await res.json();
+				document.getElementById("textInput").value = data.sentence;
+			} catch (error) {
+				console.error("ランダムな文章の取得に失敗しました:", error);
+				alert("ランダムな文章の取得に失敗しました。");
+			}
+		});
+	</script>
+	<br>
+	<canvas id="canvas" width="800" height="300"></canvas><br>
+	<button id="saveBtn">保存</button>
+	<button id="clearBtn">クリア</button>
+	<script>
+		const textInput = document.getElementById("textInput");
+		const canvas = document.getElementById("canvas");
+		const ctx = canvas.getContext("2d");
+		const saveBtn = document.getElementById("saveBtn");
+		const clearBtn = document.getElementById("clearBtn");
+
+		let drawing = false;
+		let strokes = [];
+		let currentStroke = [];
+		let startTime = 0; // ★変更点1: ストローク開始時刻を記録する変数を追加
+
+		// ★変更点2: touchendでも座標を取得できるよう関数を修正
+		function getPos(e) {
+			const rect = canvas.getBoundingClientRect();
+			let clientX, clientY;
+
+			if (e.type.startsWith('touch')) {
+				if (e.touches && e.touches.length > 0) {
+					clientX = e.touches[0].clientX;
+					clientY = e.touches[0].clientY;
+				} else if (e.changedTouches && e.changedTouches.length > 0) {
+					// touchendの場合
+					clientX = e.changedTouches[0].clientX;
+					clientY = e.changedTouches[0].clientY;
+				}
+			} else {
+				clientX = e.clientX;
+				clientY = e.clientY;
+			}
+			// clientX, clientYがundefinedの場合のエラーを防ぐ
+			if (clientX === undefined || clientY === undefined) {
+				return null;
+			}
+			return { x: clientX - rect.left, y: clientY - rect.top };
+		}
+
+		// --- 描画イベントリスナー ---
+		// ★変更点3: touchendでイベントオブジェクト(e)をendDrawingに渡すように修正
+		canvas.addEventListener("touchstart", (e) => {
+			e.preventDefault();
+			startDrawing(e);
+		}, { passive: false });
+
+		canvas.addEventListener("touchmove", (e) => {
+			e.preventDefault();
+			draw(e);
+		}, { passive: false });
+
+		canvas.addEventListener("touchend", (e) => {
+			e.preventDefault();
+			endDrawing(e); // (e)を渡す
+		}, { passive: false });
+
+		// マウス・ペンイベント (変更なし)
+		canvas.addEventListener("pointerdown", startDrawing);
+		canvas.addEventListener("pointermove", draw);
+		canvas.addEventListener("pointerup", endDrawing);
+		canvas.addEventListener("pointerleave", endDrawing);
+
+		// ★変更点4: 3つの描画関数を修正して4次元データを記録
+		// 描画開始
+		function startDrawing(e) {
+			drawing = true;
+			startTime = performance.now(); // 計測開始
+			currentStroke = [];
+			strokes.push(currentStroke);
+
+			const pos = getPos(e);
+			if (!pos) return;
+
+			// 最初の点を記録 (time: 0, isTouching: 1)
+			currentStroke.push({ x: pos.x, y: pos.y, time: 0, isTouching: 1 });
+
+			ctx.beginPath();
+			ctx.moveTo(pos.x, pos.y);
+		}
+
+		// 描画中
+		function draw(e) {
+			if (!drawing) return;
+
+			const pos = getPos(e);
+			if (!pos) return;
+			const elapsedTime = performance.now() - startTime; // 経過時間
+
+			// 点を記録 (isTouching: 1)
+			currentStroke.push({ x: pos.x, y: pos.y, time: elapsedTime, isTouching: 1 });
+
+			ctx.lineTo(pos.x, pos.y);
+			ctx.stroke();
+		}
+
+		// 描画終了
+		function endDrawing(e) {
+			if (!drawing) return;
+			drawing = false;
+
+			// touchendやpointerupは座標を持つため、最後の点を記録できる
+			const pos = getPos(e);
+			if (!pos) return; // pointerleaveなどで座標が取れない場合は何もしない
+			const elapsedTime = performance.now() - startTime; // 経過時間
+
+			// 最後の点を記録 (isTouching: 0)
+			currentStroke.push({ x: pos.x, y: pos.y, time: elapsedTime, isTouching: 0 });
+		}
+
+		// --- ボタンの処理 (変更なし) ---
+		clearBtn.onclick = () => {
+			if (confirm("キャンバスの内容を全て消去しますか？")) {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				strokes = [];
+			}
+		};
+
+		saveBtn.onclick = () => {
+			const text = textInput.value;
+			if (!text.trim()) {
+				alert("収集する文章を入力してください。");
+				textInput.focus();
+				return;
+			}
+			if (strokes.length === 0 || strokes.every(s => s.length === 0)) {
+				alert("キャンバスに何も書かれていません。");
+				return;
+			}
+			const now = new Date();
+			const timestamp = now.toISOString().replace(/[-:T]/g, "").split(".")[0];
+
+			// ▼▼▼ ここからが変更箇所 ▼▼▼
+			// ファイル名として不適切な文字を置換し、長さを制限する
+			const safeText = text.trim()
+				.replace(/[\\/:*?"<>|]/g, '_') // 不適切な文字を「_」に置換
+				.replace(/\s+/g, '_')        // 空白を「_」に置換
+				.slice(0, 50);              // ファイル名の文章部分を50文字に制限
+
+			const filename = `${safeText}_${timestamp}.json`;
+			// ▲▲▲ ここまでが変更箇所 ▲▲▲
+
+			const jsonData = JSON.stringify({
+				text: text,
+				strokes: strokes,
+				filename: filename
+			});
+
+			console.log("▼保存されるJSONデータ▼");
+			console.log(JSON.parse(jsonData));
+
+			fetch("/save", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: jsonData
+			}).then(res => {
+				if (res.ok) {
+					alert(`保存しました: ${filename}`);
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					strokes = [];
+					textInput.value = "";
+				} else {
+					alert("保存に失敗しました");
+				}
+			}).catch(err => {
+				console.error("Error:", err);
+				alert("サーバーへの送信中にエラーが発生しました。");
+			});
+		};
+	</script>
+</body>
+</html>
