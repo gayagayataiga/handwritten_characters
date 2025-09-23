@@ -60,7 +60,7 @@ def process_json_folder(input_dir, output_dir, normalize=False):
 
 
 # ===== 使用例 =====
-input_dir = "sentences-4dim/changed_name"             # 元のjsonフォルダ
+input_dir = "sentences-4dim/dxdy"             # 元のjsonフォルダ
 output_dir_norm = "sentences-4dim/normalized_xy"  # 正規化して保存
 
 # 正規化して保存

@@ -5,7 +5,7 @@ import re
 # --- 設定項目 ---
 # JSONファイルが保存されているフォルダのパスを指定してください
 # 例: 'C:/Users/YourUser/Documents/handwriting_data' や './data' など
-TARGET_DIRECTORY = 'sentences-4dim'  # フォルダ名を分かりやすく変更
+TARGET_DIRECTORY = './sentences-4dim'  # フォルダ名を分かりやすく変更
 # ----------------
 
 
