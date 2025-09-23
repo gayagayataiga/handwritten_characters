@@ -36,7 +36,7 @@ class HandwritingTransformer(nn.Module):
             encoder_layer, num_layers=num_layers)
 
         # --- Decoder（ストローク側） ---
-        self.stroke_embedding = nn.Linear(3, d_model)
+        self.stroke_embedding = nn.Linear(4, d_model)
         self.pos_decoder = nn.Embedding(10000, d_model)
 
         decoder_layer = nn.TransformerDecoderLayer(
@@ -46,6 +46,7 @@ class HandwritingTransformer(nn.Module):
 
         # --- 出力ヘッド ---
         self.mdn_head = nn.Linear(d_model, self.n_mixtures * 6)
+        self.fc_time = nn.Linear(d_model, 1)
         self.fc_end = nn.Linear(d_model, 2)
 
     def forward(self, text_ids, stroke_seq, src_key_padding_mask=None, tgt_key_padding_mask=None):
@@ -84,8 +85,9 @@ class HandwritingTransformer(nn.Module):
         sigma_y = torch.exp(sigma_y_log)
         rho_xy = torch.tanh(rho_xy_tanh)
 
-        end = self.fc_end(out)
-        return pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, end
+        time_pred = self.fc_time(out)
+        contact_pred = self.fc_contact(out)
+        return pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, time_pred, contact_pred
 
 # ===================================================================
 # 2. 損失関数と学習ループ
@@ -115,10 +117,11 @@ def mdn_loss(pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, target_dxdy):
 # ===================================================================
 
 
-def compute_loss(mdn_params, end_pred, seq_gt, mask):
+def compute_loss(mdn_params, time_pred, contact_pred, seq_gt, mask):
     pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy = mdn_params
     dxdy_gt = seq_gt[:, :, :2]
-    end_gt = seq_gt[:, :, 2].long()
+    time_gt = seq_gt[:, :, 2]      # 3番目の要素がtime
+    contact_gt = seq_gt[:, :, 3].long()  # 4番目の要素がcontact
 
     # --- MDN Loss ---
     # 修正前: mask_expanded = mask.unsqueeze(-1) を使っていたためIndexErrorが発生
@@ -141,17 +144,25 @@ def compute_loss(mdn_params, end_pred, seq_gt, mask):
     else:
         loss_mdn = torch.tensor(0.0, device=pi.device)
 
-    # --- End flag Loss (CrossEntropy) ---
-    end_pred_masked = end_pred[mask]
-    end_gt_masked = end_gt[mask]
-
-    if end_pred_masked.nelement() > 0:
-        loss_ce = nn.CrossEntropyLoss()(end_pred_masked, end_gt_masked)
+    # --- Time Loss (例: MSE) ---
+    time_pred_masked = time_pred.squeeze(-1)[mask]
+    time_gt_masked = time_gt[mask]
+    if time_pred_masked.nelement() > 0:
+        loss_time = nn.MSELoss()(time_pred_masked, time_gt_masked)
     else:
-        loss_ce = torch.tensor(0.0, device=end_pred.device)
+        loss_time = torch.tensor(0.0, device=pi.device)
 
-    loss = loss_mdn + loss_ce
-    return loss, loss_mdn.item(), loss_ce.item()
+    # --- Contact flag Loss (CrossEntropy) ---
+    contact_pred_masked = contact_pred[mask]
+    contact_gt_masked = contact_gt[mask]
+    if contact_pred_masked.nelement() > 0:
+        loss_ce = nn.CrossEntropyLoss()(contact_pred_masked, contact_gt_masked)
+    else:
+        loss_ce = torch.tensor(0.0, device=pi.device)
+
+    # --- 合計損失 ---
+    loss = loss_mdn + loss_time + loss_ce
+    return loss, loss_mdn.item(), loss_time.item(), loss_ce.item()
 
 
 def train_model(model, dataloader, epochs=50, lr=1e-4, device="cuda"):
@@ -175,14 +186,14 @@ def train_model(model, dataloader, epochs=50, lr=1e-4, device="cuda"):
             if target_seq.shape[1] == 0:
                 continue
 
-            pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, end_pred = model(
+            pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, time_pred, contact_pred = model(
                 text_ids, decoder_input_seq,
                 src_key_padding_mask=text_padding_mask,
                 tgt_key_padding_mask=decoder_input_padding_mask
             )
             mdn_params = (pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy)
             loss, mdn, ce = compute_loss(
-                mdn_params, end_pred, target_seq, target_mask)
+                mdn_params,  time_pred, contact_pred, target_seq, target_mask)
 
             if not torch.isnan(loss) and not torch.isinf(loss):
                 optimizer.zero_grad()
@@ -237,29 +248,31 @@ def generate_strokes(model, text, char2id, id2char, max_len=700, device="cuda"):
         strokes, x, y = [], 0.0, 0.0
 
         for _ in range(max_len):
-            pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, end_pred = model(
+            pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy, time_pred, contact_pred = model(
                 text_ids, seq)
 
             pi_last = pi[0, -1, :]
             mu_x_last, mu_y_last = mu_x[0, -1, :], mu_y[0, -1, :]
             sigma_x_last, sigma_y_last = sigma_x[0, -1, :], sigma_y[0, -1, :]
             rho_xy_last = rho_xy[0, -1, :]
-            end_logits_last = end_pred[0, -1, :]
+            time_pred_last = time_pred[0, -1, :]
+            contact_logits_last = contact_pred[0, -1, :]
 
             dx, dy = sample_from_mdn(
                 pi_last, mu_x_last, mu_y_last, sigma_x_last, sigma_y_last, rho_xy_last)
-            end = torch.argmax(end_logits_last).item()
+            contact = torch.argmax(contact_logits_last).item()
 
             x += dx
             y += dy
-            strokes.append((x, y, end))
-
-            if end == 1 and len(strokes) > 1:
-                break  # 1点だけでの終了を防ぐ
+            strokes.append((x, y, contact))
 
             new_point = torch.tensor(
-                [[[dx, dy, float(end)]]], device=device, dtype=torch.float32)
+                [[[dx, dy, time_pred_last, float(contact)]]], device=device, dtype=torch.float32)
             seq = torch.cat([seq, new_point], dim=1)
+
+            if contact == 0 and len(strokes) > 1:
+                break  # 1点だけでの終了を防ぐ
+
     return strokes
 
 # ... plot_strokes, データセット関連の関数は変更なし ...
@@ -319,7 +332,7 @@ class HandwritingDataset(Dataset):
         text, strokes = self.data[idx]
         text_ids = [self.char2id["<s>"]] + [self.char2id.get(
             c, self.char2id["<unk>"]) for c in text] + [self.char2id["</s>"]]
-        stroke_seq = [(0.0, 0.0, 0.0)] + strokes
+        stroke_seq = [(0.0, 0.0, 0.0, 0.0)] + strokes
         return torch.tensor(text_ids, dtype=torch.long), torch.tensor(stroke_seq, dtype=torch.float32)
 
 

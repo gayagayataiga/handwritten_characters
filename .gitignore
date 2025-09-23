@@ -86,3 +86,5 @@
 !sentences-4dim/dxdy/
 !sentences-4dim/dxdy/*.py
 !sentences-4dim/dxdy/*.json
+!sentences-4dim/models/
+!sentences-4dim/models/*.py
