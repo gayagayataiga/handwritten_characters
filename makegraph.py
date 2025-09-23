@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import os
 
 # フォルダパス
-folder = "sentences"
+folder = "./sentences-4dim/normalized_xy"
 
 # 色を決める（ストロークごとにループ）
-colors = ['red', 'red', 'red', 'orange', 'purple']
+colors = ['red', 'black', 'blue', 'orange', 'purple']
 
 plt.figure(figsize=(6, 6))
 
@@ -29,6 +29,7 @@ for file in sorted(os.listdir(folder)):
                      linewidth=2,
                      alpha=0.3,                  # ← 透明度を追加
                      label=f"{file} stroke {i+1}")
+    break
 
 plt.gca().invert_yaxis()  # Canvas座標系に合わせる
 plt.axis("equal")

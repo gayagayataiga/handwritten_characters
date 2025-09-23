@@ -3,12 +3,13 @@ import json
 import numpy as np
 
 
-def normalize_strokes(strokes):
+def dxdy_strokes(strokes):
     """strokes全体をまとめてmin-max正規化 (0〜1)、x,yのみ"""
     all_points = []
     for stroke in strokes:
         for pt in stroke:
-            all_points.append([pt["x"], pt["y"], pt["time"]])
+            all_points.append(
+                [pt["x"]-stroke[0]["x"], pt["y"]-stroke[0]["y"], pt["time"]])
 
     arr = np.array(all_points, dtype=float)
 
@@ -36,10 +37,6 @@ def normalize_strokes(strokes):
 
 
 def process_json_folder(input_dir, output_dir, normalize=False):
-    """
-    input_dir の JSON を output_dir にコピーする。
-    normalize=True の場合は strokes を正規化して保存。
-    """
     os.makedirs(output_dir, exist_ok=True)
     for filename in os.listdir(input_dir):
         if filename.endswith(".json"):
@@ -50,7 +47,7 @@ def process_json_folder(input_dir, output_dir, normalize=False):
                 data = json.load(f)
 
             if normalize and "strokes" in data:
-                data["strokes"] = normalize_strokes(data["strokes"])
+                data["strokes"] = dxdy_strokes(data["strokes"])
 
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
@@ -61,7 +58,6 @@ def process_json_folder(input_dir, output_dir, normalize=False):
 
 # ===== 使用例 =====
 input_dir = "sentences-4dim/changed_name"             # 元のjsonフォルダ
-output_dir_norm = "sentences-4dim/normalized_xy"  # 正規化して保存
+output_dir_norm = "sentences-4dim/dxdy"  # 正規化して保存
 
-# 正規化して保存
 process_json_folder(input_dir, output_dir_norm, normalize=True)

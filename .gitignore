@@ -83,3 +83,6 @@
 !sentences-4dim/normalized_xy/
 !sentences-4dim/normalized_xy/*.py
 !sentences-4dim/normalized_xy/*.json
+!sentences-4dim/dxdy/
+!sentences-4dim/dxdy/*.py
+!sentences-4dim/dxdy/*.json
