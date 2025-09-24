@@ -47,7 +47,7 @@ class HandwritingTransformer(nn.Module):
         # --- 出力ヘッド ---
         self.mdn_head = nn.Linear(d_model, self.n_mixtures * 6)
         self.fc_time = nn.Linear(d_model, 1)
-        self.fc_end = nn.Linear(d_model, 2)
+        self.fc_contact = nn.Linear(d_model, 2)
 
     def forward(self, text_ids, stroke_seq, src_key_padding_mask=None, tgt_key_padding_mask=None):
         B, T_text = text_ids.shape
@@ -171,7 +171,7 @@ def train_model(model, dataloader, epochs=50, lr=1e-4, device="cuda"):
 
     for epoch in range(1, epochs + 1):
         model.train()
-        total_loss, total_mdn, total_ce = 0, 0, 0
+        total_loss, total_mdn, total_time, total_ce = 0, 0, 0, 0
 
         for text_ids, seq, text_padding_mask, seq_padding_mask in dataloader:
             text_ids, seq, text_padding_mask, seq_padding_mask = \
@@ -192,7 +192,7 @@ def train_model(model, dataloader, epochs=50, lr=1e-4, device="cuda"):
                 tgt_key_padding_mask=decoder_input_padding_mask
             )
             mdn_params = (pi, mu_x, mu_y, sigma_x, sigma_y, rho_xy)
-            loss, mdn, ce = compute_loss(
+            loss, mdn, time, ce = compute_loss(
                 mdn_params,  time_pred, contact_pred, target_seq, target_mask)
 
             if not torch.isnan(loss) and not torch.isinf(loss):
@@ -203,12 +203,16 @@ def train_model(model, dataloader, epochs=50, lr=1e-4, device="cuda"):
                 total_loss += loss.item()
                 total_mdn += mdn
                 total_ce += ce
+                total_time += time
 
         avg_loss = total_loss / len(dataloader) if dataloader else 0
         avg_mdn = total_mdn / len(dataloader) if dataloader else 0
         avg_ce = total_ce / len(dataloader) if dataloader else 0
+        avg_time = total_time / len(dataloader) if dataloader else 0
         print(
-            f"Epoch {epoch}/{epochs} - Loss: {avg_loss:.4f} (MDN: {avg_mdn:.4f}, CE: {avg_ce:.4f})")
+            f"Epoch {epoch}/{epochs} - Loss: {avg_loss:.4f} "
+            f"(MDN: {avg_mdn:.4f}, Time: {avg_time:.4f}, CE: {avg_ce:.4f})"
+        )
     return model
 
 # ===================================================================
@@ -244,7 +248,7 @@ def generate_strokes(model, text, char2id, id2char, max_len=700, device="cuda"):
         text_ids = torch.tensor(
             text_ids, dtype=torch.long, device=device).unsqueeze(0)
 
-        seq = torch.zeros((1, 1, 3), device=device)
+        seq = torch.zeros((1, 1, 4), device=device)
         strokes, x, y = [], 0.0, 0.0
 
         for _ in range(max_len):
@@ -255,7 +259,7 @@ def generate_strokes(model, text, char2id, id2char, max_len=700, device="cuda"):
             mu_x_last, mu_y_last = mu_x[0, -1, :], mu_y[0, -1, :]
             sigma_x_last, sigma_y_last = sigma_x[0, -1, :], sigma_y[0, -1, :]
             rho_xy_last = rho_xy[0, -1, :]
-            time_pred_last = time_pred[0, -1, :]
+            time_pred_last = time_pred[0, -1, 0].item()
             contact_logits_last = contact_pred[0, -1, :]
 
             dx, dy = sample_from_mdn(
@@ -286,7 +290,7 @@ def plot_strokes(strokes, title="Generated Handwriting"):
     for (x, y, end) in strokes:
         current_stroke_x.append(x)
         current_stroke_y.append(-y)
-        if end == 1:
+        if end == 0:
             if current_stroke_x:
                 ax.plot(current_stroke_x, current_stroke_y,
                         "k-", linewidth=2.5)
@@ -313,11 +317,14 @@ def load_dataset_from_directory(directory_path):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                text, strokes = data.get('text'), data.get('sequence')
-                # ここでsequenceが(x,y,end)のリストであることを確認
+                text, strokes = data.get('text'), data.get('strokes')
+                # ここでstrokesが(x,y,end)のリストであることを確認
                 # もしくはstrokesが(x,y)のリストでendは0で補完されている場合も考慮
                 if text is not None and strokes is not None:
-                    dataset.append((text, [tuple(p) for p in strokes]))
+                    for i in range(len(strokes)):
+                        dataset.append((text, [tuple(p) for p in strokes[i]]))
+
+                    # 追加: 読み込んだデータを表示
             except Exception as e:
                 print(f"Could not load/parse {filename}: {e}")
     print(f"Successfully loaded {len(dataset)} samples.")
@@ -380,7 +387,7 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
-    DATA_DIRECTORY = "./sentence-4dim/normalized_xy"  # 正規化済みデータフォルダ
+    DATA_DIRECTORY = "sentences-4dim/normalized_xy"  # 正規化済みデータフォルダ
     my_data = load_dataset_from_directory(DATA_DIRECTORY)
     if not my_data:
         print("No data found. Exiting.")

@@ -8,7 +8,7 @@ def normalize_strokes(strokes):
     all_points = []
     for stroke in strokes:
         for pt in stroke:
-            all_points.append([pt["x"], pt["y"], pt["time"]])
+            all_points.append([pt["x"], pt["y"], pt["time"], pt["isTouching"]])
 
     arr = np.array(all_points, dtype=float)
 
@@ -23,12 +23,18 @@ def normalize_strokes(strokes):
     for stroke in strokes:
         new_stroke = []
         for pt in stroke:
-            x, y, time = norm_arr[idx]
+            x, y, time, isTouching = norm_arr[idx]
             if time < 0.001:
                 time = 0.001  # time は最小値を0.001にする
-            new_stroke.append({"x": float(x),
-                               "y": float(y),
-                               "time": float(time)})
+            if isTouching < 0.5:
+                isTouching = 0
+            else:
+                isTouching = 1
+            # new_stroke.append({"x": float(x),
+            #                    "y": float(y),
+            #                    "time": float(time),
+            #                    "isTouching": isTouching})
+            new_stroke.append([float(x), float(y), float(time), isTouching])
             idx += 1
         result.append(new_stroke)
 
