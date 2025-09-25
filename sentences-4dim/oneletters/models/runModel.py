@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # strokes = generate_strokes(model, vocab, text="り", max_steps=100, device=device)
     # xy = strokes_to_xy(strokes)
     # plot_strokes(xy)
-    output_folder = "generated_strokes"
+    output_folder = "sentences-4dim/oneletters/generated_strokes"
     os.makedirs(output_folder, exist_ok=True)  # フォルダが存在しない場合は自動で作成
 
     # 3. リストの文字を1つずつループで処理

@@ -64,7 +64,7 @@ def mdn_loss_bivariate(pi, mu_x, mu_y, sigma_x, sigma_y, rho, target_x, target_y
     denom = 2 * math.pi * sigma_x * sigma_y * torch.sqrt(one_minus_rho2)
     log_component = -0.5 * norm - torch.log(denom + eps)  # [B, T, K]
     log_mix = torch.logsumexp(pi + log_component, dim=-1)  # [B, T]
-    return -log_mix.mean()
+    return -log_mix
 
 def compute_loss(model_out, target_dx, target_dy, target_pen, stroke_mask):
     pi = model_out["pi"]
@@ -75,7 +75,11 @@ def compute_loss(model_out, target_dx, target_dy, target_pen, stroke_mask):
     rho = model_out["rho"]
     pen_logits = model_out["pen"]
 
-    mdn_nll = mdn_loss_bivariate(pi, mu_x, mu_y, sigma_x, sigma_y, rho, target_dx, target_dy)
+    # mdn_nll = mdn_loss_bivariate(pi, mu_x, mu_y, sigma_x, sigma_y, rho, target_dx, target_dy)
+
+    log_mix = mdn_loss_bivariate(pi, mu_x, mu_y, sigma_x, sigma_y, rho, target_dx, target_dy)
+    mdn_nll = (log_mix * stroke_mask.float()).sum() / (stroke_mask.sum() + 1e-8)
+
 
     pen_ce = F.cross_entropy(
         pen_logits.view(-1, pen_logits.size(-1)),
@@ -102,7 +106,7 @@ class HandwritingTransformer(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, batch_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
 
-        self.stroke_in = nn.Linear(2 + pen_states, d_model)
+        self.stroke_in = nn.Linear( pen_states, d_model)
         self.stroke_pos = PositionalEncoding(d_model)
         decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, batch_first=True)
         self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
@@ -144,7 +148,7 @@ class HandwritingTransformer(nn.Module):
 # ======================
 # Training Loop
 # ======================
-def train_loop(data_dir, vocab, epochs=10, batch_size=8, lr=1e-4, device="cuda"):
+def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cuda"):
     dataset = StrokeDataset(data_dir)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -152,10 +156,10 @@ def train_loop(data_dir, vocab, epochs=10, batch_size=8, lr=1e-4, device="cuda")
         vocab_size=len(vocab)+1,
         d_model=256, nhead=8,
         num_encoder_layers=4, num_decoder_layers=4,
-        dim_feedforward=512, mdn_components=20, pen_states=2
+        dim_feedforward=512, mdn_components=20, pen_states=4
     ).to(device)
 
-    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
 
     os.makedirs("checkpoints", exist_ok=True)
 
@@ -205,5 +209,5 @@ if __name__ == "__main__":
              "ら": 31, "り": 32, "る": 33, "れ": 34, "ろ": 35,
              "わ": 36, "を": 37, "ん": 38, "。": 39, "、": 40,}  # 必要に応じて拡張
 
-    train_loop("./sentences-4dim/oneletters/norm_padding", vocab, epochs=10, batch_size=8, lr=1e-4)
+    train_loop("./sentences-4dim/oneletters/norm_padding", vocab, epochs=1000, batch_size=32, lr=1e-4)
     
