@@ -109,3 +109,6 @@
 !sentences-4dim/oneletters/norm_padding/*.json
 !sentences-4dim/oneletters/checkpoints/
 !sentences-4dim/oneletters/checkpoints/*.pt
+!sentences-4dim/oneletters/resampling/
+!sentences-4dim/oneletters/resampling/*.py
+!sentences-4dim/oneletters/resampling/*.json
