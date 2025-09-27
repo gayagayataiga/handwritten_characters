@@ -124,7 +124,9 @@ def remove_consecutive_duplicates(points):
 
 
 def resample_stroke(stroke, num_points):
-    """一つのストロークを等間隔な点にリサンプリングします。"""
+    """
+    一つのストロークを等間隔な点にリサンプリングします。（NaN対策版）
+    """
     if len(stroke) < 2:
         return []
 
@@ -135,28 +137,52 @@ def resample_stroke(stroke, num_points):
     distances = np.sqrt(np.sum(np.diff(coords, axis=0)**2, axis=1))
     cumulative_distances = np.insert(np.cumsum(distances), 0, 0)
 
+    # 全ての点が同じ場所にある場合（全長が0）
     if cumulative_distances[-1] == 0:
-        resampled = [stroke[0]] * num_points
+        resampled = [stroke[0] for _ in range(num_points)]
+        resampled[-1][3] = 0.0 # 最後はペンアップ
+        return resampled
+
+    # ▼▼▼▼▼ ここからがNaN対策の修正箇所 ▼▼▼▼▼
+    
+    # 累積距離から重複を取り除き、ユニークなインデックスを取得
+    unique_dist, unique_indices = np.unique(cumulative_distances, return_index=True)
+
+    # もし重複があった場合、データもユニークな点のみに絞り込む
+    # interp1dに渡すx軸の値が必ず単調増加になるようにする
+    if len(unique_dist) < len(cumulative_distances):
+        interp_dist = unique_dist
+        interp_coords = points[unique_indices, :2]
+        interp_times = points[unique_indices, 2]
+    else:
+        interp_dist = cumulative_distances
+        interp_coords = coords
+        interp_times = times
+        
+    # interp1dの入力データが2点未満になった場合は、補間できないので最初の点を返す
+    if len(interp_dist) < 2:
+        resampled = [stroke[0] for _ in range(num_points)]
         resampled[-1][3] = 0.0
         return resampled
 
+    # ▲▲▲▲▲ ここまでが修正箇所 ▲▲▲▲▲
+
     target_distances = np.linspace(0, cumulative_distances[-1], num_points)
 
-    interp_x = interp1d(cumulative_distances,
-                        coords[:, 0], kind='linear', fill_value="extrapolate")
-    interp_y = interp1d(cumulative_distances,
-                        coords[:, 1], kind='linear', fill_value="extrapolate")
-    interp_time = interp1d(cumulative_distances, times,
-                           kind='linear', fill_value="extrapolate")
+    # 修正後のデータで補間関数を作成
+    interp_x = interp1d(interp_dist, interp_coords[:, 0], kind='linear', fill_value="extrapolate")
+    interp_y = interp1d(interp_dist, interp_coords[:, 1], kind='linear', fill_value="extrapolate")
+    interp_time = interp1d(interp_dist, interp_times, kind='linear', fill_value="extrapolate")
 
     new_x = interp_x(target_distances)
     new_y = interp_y(target_distances)
     new_times = interp_time(target_distances)
 
-    resampled_stroke = [[x, y, t, 1.0]
-                        for x, y, t in zip(new_x, new_y, new_times)]
+    resampled_stroke = [[x, y, t, 1.0] for x, y, t in zip(new_x, new_y, new_times)]
+    
     if resampled_stroke:
-        resampled_stroke[-1][3] = 0.0
+        resampled_stroke[-1][3] = 0.0 # 最後はペンアップ
+        
     return resampled_stroke
 
 
@@ -295,22 +321,23 @@ def augment_strokes(strokes_list):
         augmented_strokes.append(new_stroke)
     return augmented_strokes
 # ===============================================================
-# process_files_in_folder とメイン実行部分は変更ありません
+# 上部の resample_stroke, normalize_character などの関数は変更なし
 # ===============================================================
 
-
-def process_files_in_folder(input_dir, output_dir):
+def process_files_in_folder(input_dir, output_dir, num_augmentations):
     """
-    フォルダ内のJSONファイルを前処理し、通常版と拡張版の2種類を同じフォルダに保存する。
+    フォルダ内のJSONファイルを前処理し、指定された回数データ拡張を行って保存する。
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         print(f"フォルダを作成しました: {output_dir}")
 
     files = os.listdir(input_dir)
-    processed_count = 0
+    total_files_created = 0
 
-    for filename in files:
+    # tqdmを使って進捗を表示
+    from tqdm import tqdm
+    for filename in tqdm(files, desc="ファイルを処理中"):
         if filename.endswith('.json'):
             input_path = os.path.join(input_dir, filename)
 
@@ -319,69 +346,57 @@ def process_files_in_folder(input_dir, output_dir):
                     data = json.load(f)
 
                 if 'strokes' in data and isinstance(data['strokes'], list):
-                    # --- 共通の前処理 (正規化まで) ---
+                    # --- 共通の前処理 (リサンプリングと正規化) ---
                     original_strokes = data['strokes']
 
-                    cleaned_strokes = []
-                    for single_stroke in original_strokes:
-                        cleaned_stroke = remove_consecutive_duplicates(
-                            single_stroke)
-                        if cleaned_stroke:
-                            cleaned_strokes.append(cleaned_stroke)
+                    # 辞書形式からリスト形式へ変換
+                    strokes_as_lists_raw = convert_dict_strokes_to_lists(original_strokes)
 
-                    strokes_as_lists = convert_dict_strokes_to_lists(
-                        cleaned_strokes)
-
+                    # ストロークごとに重複削除とリサンプリング
                     resampled_strokes = []
-                    for single_stroke in strokes_as_lists:
-                        resampled = resample_stroke(
-                            single_stroke, num_points=NUM_POINTS_PER_STROKE)
-                        if resampled:
-                            resampled_strokes.append(resampled)
+                    for single_stroke in strokes_as_lists_raw:
+                        # 辞書のリストではなく、数値のリストを渡す
+                        cleaned_stroke = remove_consecutive_duplicates(single_stroke)
+                        if cleaned_stroke:
+                            resampled = resample_stroke(cleaned_stroke, num_points=NUM_POINTS_PER_STROKE)
+                            if resampled:
+                                resampled_strokes.append(resampled)
 
-                    normalized_strokes = normalize_character(resampled_strokes)
-
-                    # --- ここから分岐して2つのファイルを保存 ---
+                    # --- データ拡張を複数回実行 ---
                     base_name, ext = os.path.splitext(filename)
-
-                    # 1. データ拡張なし版を保存
-                    offset_processed = convert_to_offsets(normalized_strokes)
-                    data_processed = data.copy()
-                    data_processed['strokes'] = offset_processed
-
                     text_value = data.get("text", None)
                     text_ids_value = [vocab[text_value]] if text_value in vocab else []
-                    data_processed['text_ids'] = text_ids_value
-                    output_filename_processed = f"{base_name}_processed.json"
-                    output_path_processed = os.path.join(
-                        output_dir, output_filename_processed)
 
-                    with open(output_path_processed, 'w', encoding='utf-8') as f:
-                        json.dump(data_processed, f,
-                                  ensure_ascii=False, indent=2)
+                    for i in range(num_augmentations):
+                        # 毎回、正規化からやり直すことで、多様なデータを生成
+                        normalized_strokes = normalize_character(resampled_strokes)
+                        
+                        # データ拡張を適用 (毎回ランダムな変換がかかる)
+                        augmented_strokes = augment_strokes(normalized_strokes)
+                        
+                        # オフセット座標に変換
+                        offset_augmented = convert_to_offsets(augmented_strokes)
+                        
+                        # 保存用データを作成
+                        data_to_save = {
+                            "text": text_value,
+                            "text_ids": text_ids_value,
+                            "strokes": offset_augmented # 1文字にN個のサンプルを持たせる形式
+                        }
+                        
+                        # ファイル名を連番にする
+                        output_filename = f"{base_name}_aug_{i+1}.json"
+                        output_path = os.path.join(output_dir, output_filename)
 
-                    # 2. データ拡張あり版を保存
-                    augmented_strokes = augment_strokes(normalized_strokes)
-                    offset_augmented = convert_to_offsets(augmented_strokes)
-                    data_augmented = data.copy()
-                    data_augmented['strokes'] = offset_augmented
-                    data_augmented['text_ids'] = text_ids_value
-
-                    output_filename_augmented = f"{base_name}_augmented.json"
-                    output_path_augmented = os.path.join(
-                        output_dir, output_filename_augmented)
-
-                    with open(output_path_augmented, 'w', encoding='utf-8') as f:
-                        json.dump(data_augmented, f,
-                                  ensure_ascii=False, indent=2)
-
-                    print(f"処理完了: {filename} -> 2ファイル保存")
-                    processed_count += 1
+                        with open(output_path, 'w', encoding='utf-8') as f:
+                            json.dump(data_to_save, f, ensure_ascii=False) #インデントなしでファイルサイズを削減
+                        
+                        total_files_created += 1
 
             except Exception as e:
                 print(f"エラー: {filename} の処理中に問題が発生しました - {e}")
 
-    print(f"\nすべての処理が完了しました。{processed_count}個のファイルを処理しました。")
+    print(f"\nすべての処理が完了しました。合計 {total_files_created} 個のファイルを生成しました。")
 
 
 # --- メインの実行部分 ---
@@ -389,5 +404,22 @@ if __name__ == '__main__':
     # フォルダのパスを指定
     input_folder = 'sentences-4dim/oneletters/changed_name'
     output_folder = 'sentences-4dim/oneletters/resampling'
+    
+    # 1つのオリジナルファイルから生成する拡張データの数を指定
+    NUM_AUGMENTATIONS_PER_FILE = 10
 
-    process_files_in_folder(input_folder, output_folder)
+    # 実行前に出力フォルダを空にするか確認
+    if os.path.exists(output_folder):
+        user_input = input(f"出力フォルダ '{output_folder}' 内の既存の .json ファイルをすべて削除します。よろしいですか？ (yes/no): ")
+        if user_input.lower() == 'yes':
+            print("出力フォルダ内の .json ファイルを削除しています...")
+            for f in os.listdir(output_folder):
+                # ▼▼▼▼▼ この行を修正 ▼▼▼▼▼
+                if f.endswith('.json'): # .jsonで終わるファイルのみを対象にする
+                # ▲▲▲▲▲ ここまで ▲▲▲▲▲
+                    os.remove(os.path.join(output_folder, f))
+        else:
+            print("処理を中断しました。")
+            exit()
+            
+    process_files_in_folder(input_folder, output_folder, num_augmentations=NUM_AUGMENTATIONS_PER_FILE)

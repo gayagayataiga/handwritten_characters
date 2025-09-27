@@ -62,6 +62,9 @@
 !checkModel/
 !checkModel/*.py
 
+!checkpoints/
+!checkpoints/*.pt
+
 !copied_sentences/
 !copied_sentences/*.json
 
@@ -112,3 +115,8 @@
 !sentences-4dim/oneletters/resampling/
 !sentences-4dim/oneletters/resampling/*.py
 !sentences-4dim/oneletters/resampling/*.json
+!sentences-4dim/oneletters/generated_strokes/
+!sentences-4dim/oneletters/generated_strokes/927/
+!sentences-4dim/oneletters/generated_strokes/927/*.png
+!sentences-4dim/oneletters/generated_strokes/*.png
+

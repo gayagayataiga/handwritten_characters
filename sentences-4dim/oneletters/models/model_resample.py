@@ -166,9 +166,11 @@ class HandwritingTransformer(nn.Module):
         pi = self.mdn_pi(dec)
         mu_x = self.mdn_mu_x(dec)
         mu_y = self.mdn_mu_y(dec)
-        sigma_x = torch.exp(self.mdn_sigma_x(dec))
-        sigma_y = torch.exp(self.mdn_sigma_y(dec))
-        rho = torch.tanh(self.mdn_rho(dec))
+        sigma_x = torch.exp(self.mdn_sigma_x(dec)).clamp(min=1e-4)
+        sigma_y = torch.exp(self.mdn_sigma_y(dec)).clamp(min=1e-4)
+
+        # rho (相関係数) は-1と1に近すぎると不安定になるため、少しだけ内側に制限する
+        rho = torch.tanh(self.mdn_rho(dec)).clamp(-0.99999, 0.99999)
         pen = self.pen_logits(dec)
         return dict(pi=pi, mu_x=mu_x, mu_y=mu_y,
                     sigma_x=sigma_x, sigma_y=sigma_y, rho=rho,
@@ -182,10 +184,10 @@ class HandwritingTransformer(nn.Module):
 # ======================
 # Training Loop
 # ======================
-def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cuda"):
+def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cuda",checkpoint_path=None):
     dataset = StrokeDataset(data_dir)
 
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_fn)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_fn,num_workers=4)
 
     model = HandwritingTransformer(
         vocab_size=len(vocab)+1,
@@ -196,9 +198,23 @@ def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cud
 
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
 
+    start_epoch = 1
+    if checkpoint_path and os.path.exists(checkpoint_path):
+        print(f"チェックポイントを読み込みます: {checkpoint_path}")
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+        
+        # ファイル名からエポック番号を復元して、続きから開始する（おまけ機能）
+        try:
+            # "handwriting_epoch100.pt" -> "100" を抽出
+            epoch_num_str = os.path.basename(checkpoint_path).split('epoch')[1].split('.pt')[0]
+            start_epoch = int(epoch_num_str) + 1
+            print(f"エポック {start_epoch} から学習を再開します。")
+        except:
+            print("エポック番号の復元に失敗しました。指定されたエポックから開始します。")
+            
     os.makedirs("checkpoints", exist_ok=True)
 
-    for epoch in range(1, epochs+1):
+    for epoch in range(start_epoch, epochs+1):
         model.train()
         total_loss = 0.0
         pbar = tqdm(loader, desc=f"Epoch {epoch}")
@@ -223,12 +239,13 @@ def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cud
             strokes = strokes.view(B * N, T, F)
             stroke_mask = stroke_mask.view(B * N, T)
             memory = expanded_memory.view(B * N, 1, -1)
+            # print(strokes, stroke_mask, memory)
             
             memory_mask = expanded_text_mask.view(B * N, 1) 
             # 4. デコード
             out = model.decode(strokes, stroke_mask, memory, memory_mask)
             
-            print(out)
+            # print(out)
 
             # ターゲット（正解データ）を作成
             target_dx = strokes[:,:,0]
@@ -245,7 +262,7 @@ def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cud
             total_loss += loss.item()
             pbar.set_postfix(loss=loss.item(), mdn=loss_dict["mdn"], pen=loss_dict["pen"])
         print(f"Epoch {epoch} | Avg Loss: {total_loss/len(loader):.4f}")
-        if epoch % 100 == 0:
+        if epoch % 10 == 0:
             torch.save(model.state_dict(), f"checkpoints/handwriting_epoch{epoch}.pt")
 
     print("✅ Training finished!")
@@ -265,5 +282,5 @@ if __name__ == "__main__":
              "ら": 39, "り": 40, "る": 41, "れ": 42, "ろ": 43,
              "わ": 44, "を": 45, "ん": 46, "。": 47, "、": 48,}  # 必要に応じて拡張
 
-    train_loop("sentences-4dim/oneletters/resampling", vocab, epochs=1000, batch_size=32, lr=1e-4)
+    train_loop("sentences-4dim/oneletters/resampling", vocab, epochs=300, batch_size=512, lr=1e-4,checkpoint_path="checkpoints/handwriting_epoch100.pt")
     
