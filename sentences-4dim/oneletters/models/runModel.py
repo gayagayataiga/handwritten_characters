@@ -192,7 +192,7 @@ if __name__ == "__main__":
     ).to(device)
 
     model.load_state_dict(torch.load(
-        "sentences-4dim/oneletters/checkpoints/handwriting_epoch10.pt", map_location=device))
+        "checkpoints/handwriting_epoch10.pt", map_location=device))
 
     # strokes = generate_strokes(model, vocab, text="り", max_steps=100, device=device)
     # xy = strokes_to_xy(strokes)

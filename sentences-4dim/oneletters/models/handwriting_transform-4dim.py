@@ -209,5 +209,5 @@ if __name__ == "__main__":
              "ら": 31, "り": 32, "る": 33, "れ": 34, "ろ": 35,
              "わ": 36, "を": 37, "ん": 38, "。": 39, "、": 40,}  # 必要に応じて拡張
 
-    train_loop("./sentences-4dim/oneletters/norm_padding", vocab, epochs=1000, batch_size=32, lr=1e-4)
+    train_loop("./sentences-4dim/oneletters/norm_padding", vocab, epochs=10, batch_size=32, lr=1e-4)
     

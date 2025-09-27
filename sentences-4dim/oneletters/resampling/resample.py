@@ -8,6 +8,18 @@ import matplotlib.pyplot as plt
 # --- 定数設定 ---
 NUM_POINTS_PER_STROKE = 64
 
+vocab = {"あ": 1, "い": 2, "う": 3, "え": 4, "お": 5,
+             "か": 6, "き": 7, "く": 8, "け": 9, "こ": 10,
+             "さ": 11, "し": 12, "す": 13, "せ": 14, "そ": 15,
+             "た": 16, "ち": 17, "つ": 18, "て": 19, "と": 20,
+             "な": 21, "に": 22, "ぬ": 23, "ね": 24, "の": 25,
+             "は": 26, "ひ": 27, "ふ": 28, "へ": 29, "ほ": 30,
+             "ま": 31, "み": 32, "む": 33, "め": 34, "も": 35,
+             "や": 36, "ゆ": 37, "よ": 38,
+             "ら": 39, "り": 40, "る": 41, "れ": 42, "ろ": 43,
+             "わ": 44, "を": 45, "ん": 46, "。": 47, "、": 48,}  # 必要に応じて拡張
+
+
 
 def convert_dict_strokes_to_lists(strokes_in_dict_format):
     """
@@ -337,6 +349,9 @@ def process_files_in_folder(input_dir, output_dir):
                     data_processed = data.copy()
                     data_processed['strokes'] = offset_processed
 
+                    text_value = data.get("text", None)
+                    text_ids_value = [vocab[text_value]] if text_value in vocab else []
+                    data_processed['text_ids'] = text_ids_value
                     output_filename_processed = f"{base_name}_processed.json"
                     output_path_processed = os.path.join(
                         output_dir, output_filename_processed)
@@ -350,6 +365,7 @@ def process_files_in_folder(input_dir, output_dir):
                     offset_augmented = convert_to_offsets(augmented_strokes)
                     data_augmented = data.copy()
                     data_augmented['strokes'] = offset_augmented
+                    data_augmented['text_ids'] = text_ids_value
 
                     output_filename_augmented = f"{base_name}_augmented.json"
                     output_path_augmented = os.path.join(
