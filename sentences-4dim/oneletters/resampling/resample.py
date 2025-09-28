@@ -232,35 +232,21 @@ def normalize_character(strokes_list):
 
 
 def convert_to_offsets(strokes_list):
-    """
-    (新規追加) 絶対座標を差分座標 (offset) に変換する。
-    """
-    if not strokes_list:
-        return []
-
     offset_strokes = []
     for stroke in strokes_list:
         if not stroke:
             continue
-
-        # 各ストロークの最初の点は、(0,0,0)からの移動量なので、そのまま絶対座標を使用
-        new_stroke = [stroke[0]]
-
-        # 2点目以降は、前の点からの差分を計算
+        new_stroke = [[0.0, 0.0, 0.0, stroke[0][3]]]  # ← 最初は常にゼロ基準
         for i in range(1, len(stroke)):
             prev_point = stroke[i-1]
             curr_point = stroke[i]
-
             dx = curr_point[0] - prev_point[0]
             dy = curr_point[1] - prev_point[1]
             dt = curr_point[2] - prev_point[2]
-            is_down = curr_point[3]  # ペン状態はそのままコピー
-
-            new_stroke.append([dx, dy, dt, is_down])
-
+            new_stroke.append([dx, dy, dt, curr_point[3]])
         offset_strokes.append(new_stroke)
-
     return offset_strokes
+
 
 
 def reconstruct_from_offsets(offset_strokes):
