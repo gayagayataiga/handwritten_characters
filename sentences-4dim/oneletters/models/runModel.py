@@ -180,8 +180,8 @@ if __name__ == "__main__":
              "は": 26, "ひ": 27, "ふ": 28, "へ": 29, "ほ": 30,
              "ま": 31, "み": 32, "む": 33, "め": 34, "も": 35,
              "や": 36, "ゆ": 37, "よ": 38,
-             "ら": 31, "り": 32, "る": 33, "れ": 34, "ろ": 35,
-             "わ": 36, "を": 37, "ん": 38, "。": 39, "、": 40, }
+             "ら": 39, "り": 40, "る": 41, "れ": 42, "ろ": 43,
+             "わ": 44, "を": 45, "ん": 46, "。": 47, "、": 48, }
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     model = HandwritingTransformer(
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     ).to(device)
 
     model.load_state_dict(torch.load(
-        "checkpoints/handwriting_epoch600.pt", map_location=device))
+        "checkpoints/myresampling/handwriting_epoch10.pt", map_location=device))
 
     # strokes = generate_strokes(model, vocab, text="り", max_steps=100, device=device)
     # xy = strokes_to_xy(strokes)

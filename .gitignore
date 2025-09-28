@@ -149,4 +149,7 @@
 !sentences-4dim/oneletters/mydxdy/normdxdy/*.json
 !sentences-4dim/oneletters/mydxdy/normdxdy_image/
 !sentences-4dim/oneletters/mydxdy/normdxdy_image/*.png
+!sentences-4dim/oneletters/mydxdy/addtextids/
+!sentences-4dim/oneletters/mydxdy/addtextids/*.py
+!sentences-4dim/oneletters/mydxdy/addtextids/*.json
 

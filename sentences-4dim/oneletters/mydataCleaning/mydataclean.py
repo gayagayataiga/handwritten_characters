@@ -12,6 +12,34 @@ OUTPUT_DIR = 'sentences-4dim/oneletters/mydataCleaning/images/'
 SAVING_DATA_DIR = 'sentences-4dim/oneletters/mydataCleaning/resampled/'
 NUM_POINTS = 10  # 補間後の点の数
 
+def add_noise_to_stroke(stroke, noise_level=1.0, time_noise=0.01, shift_level=2.0):
+    """
+    ストロークにノイズを付与する関数
+    Args:
+        stroke: np.array [N, 4] (x, y, time, touching)
+        noise_level: 座標ごとのランダム揺らぎの標準偏差
+        time_noise: 時間軸の揺らぎの標準偏差
+        shift_level: 全体の平行移動の範囲
+    """
+    noisy_stroke = stroke.copy()
+
+    # --- 座標ごとのガウスノイズ ---
+    noisy_stroke[:, 0] += np.random.normal(0, noise_level, size=len(stroke))  # x
+    noisy_stroke[:, 1] += np.random.normal(0, noise_level, size=len(stroke))  # y
+
+    # --- 時間に少しノイズ ---
+    noisy_stroke[:, 2] += np.random.normal(0, time_noise, size=len(stroke))
+
+    # --- 全体のランダム平行移動 ---
+    shift_x = np.random.uniform(-shift_level, shift_level)
+    shift_y = np.random.uniform(-shift_level, shift_level)
+    noisy_stroke[:, 0] += shift_x
+    noisy_stroke[:, 1] += shift_y
+
+    return noisy_stroke
+
+
+
 def process_and_save_plot(json_path, output_dir):
     """
     一つのJSONファイルを読み込み、スプライン補間のグラフを生成して保存する関数

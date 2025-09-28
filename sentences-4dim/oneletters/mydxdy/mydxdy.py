@@ -105,14 +105,11 @@ for file_path in json_files:
     new_strokes = []
     zeroXpoint = data["strokes"][0][0][0]
     zeroYpoint = data["strokes"][0][0][1]
-    firststroke = True
+    divX = 0
+    divY = 0
+
     for stroke in data["strokes"]:          # stroke = 1本の筆跡 (リスト)
         new_stroke = []
-        if firststroke == True:
-            new_stroke.append([zeroXpoint,zeroYpoint,0,1])
-            firststroke = False
-            divX = zeroXpoint
-            divY = zeroYpoint
         for point in stroke:                
             new_stroke.append([
                 round(point[0] - divX,6),
