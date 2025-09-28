@@ -109,7 +109,7 @@ def process_and_save_plot(json_path, output_dir):
     except Exception as e:
         print(f"❌ Error processing {json_path}: {e}")
 
-def process_and_resample(json_path):
+def process_and_resample(json_path, num_noisy_versions=3):
     """
     JSONを読み込み、スプライン補間とリサンプリングを行い、
     グラフと処理後のデータを保存する関数
@@ -124,6 +124,7 @@ def process_and_resample(json_path):
                 
         # 処理後の全ストロークのデータを格納するリスト
         all_resampled_strokes = []
+        all_resampled_strokes_noisy = [[] for _ in range(num_noisy_versions)]
 
         for i, stroke in enumerate(strokes):
             stroke_array = np.array(stroke)
@@ -152,7 +153,7 @@ def process_and_resample(json_path):
             x_resampled = cs_x(t_resampled)
             y_resampled = cs_y(t_resampled)
             time_resampled = cs_t(t_resampled)
-            touching_resampled = np.ones_like(x_resampled) 
+            # touching_resampled = np.ones_like(x_resampled) 
 
             
             # 処理後のデータを保存用にまとめる
@@ -175,6 +176,16 @@ def process_and_resample(json_path):
             
             # 3. 描画点とペン上げ点を結合して、長さが NUM_POINTS + 1 のデータにする
             resampled_stroke = np.vstack([drawing_points, pen_up_point])
+            # 複数のノイズ版
+            for i in range(num_noisy_versions):
+                noisy_stroke = add_noise_to_stroke(
+                    resampled_stroke,
+                    noise_level=1.0,
+                    time_noise=0.05,
+                    shift_level=3.0
+                )
+                all_resampled_strokes_noisy[i].append(noisy_stroke)
+            
             all_resampled_strokes.append(resampled_stroke)
 
         
@@ -194,6 +205,20 @@ def process_and_resample(json_path):
             json.dump(output_data, f, ensure_ascii=False, indent=2)
         print(f"✔️ Processed: {base_filename}.json -> Saved json and data.")
 
+
+        # --- JSON保存 (複数のノイズ有り) ---
+        for i, noisy_strokes in enumerate(all_resampled_strokes_noisy):
+            output_data_noisy = {
+                "text": char_text,
+                "strokes": [s.tolist() for s in noisy_strokes]
+            }
+            output_data_path_noisy = os.path.join(
+                SAVING_DATA_DIR, f'{base_filename}_noisy{i+1}.json'
+            )
+            with open(output_data_path_noisy, 'w', encoding='utf-8') as f:
+                json.dump(output_data_noisy, f, ensure_ascii=False, indent=2)
+        print(f"✔️ Processed: {base_filename}.json -> Saved normal + noisy json.")
+
     except Exception as e:
         print(f"❌ Error processing {os.path.basename(json_path)}: {e}")
 
@@ -206,10 +231,10 @@ if __name__ == '__main__':
     if not json_files:
         print(f"No JSON files found in '{INPUT_DIR}' directory.")
     else:
-        if True:
+        if False:
             for file_path in json_files:
                 # 順々に画像として保存  
                 process_and_save_plot(file_path, OUTPUT_DIR)
         for file_path in json_files:
-            process_and_resample(file_path)
+            process_and_resample(file_path, num_noisy_versions=3)
         print("\nAll files processed.")
