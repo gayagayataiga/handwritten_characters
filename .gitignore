@@ -119,4 +119,7 @@
 !sentences-4dim/oneletters/generated_strokes/927/
 !sentences-4dim/oneletters/generated_strokes/927/*.png
 !sentences-4dim/oneletters/generated_strokes/*.png
+!sentences-4dim/oneletters/checkpoints/
+!sentences-4dim/oneletters/checkpoints/928/
+!sentences-4dim/oneletters/checkpoints/928/*.pt
 

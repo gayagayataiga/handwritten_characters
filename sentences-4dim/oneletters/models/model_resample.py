@@ -262,7 +262,7 @@ def train_loop(data_dir, vocab, epochs=1000, batch_size=32, lr=1e-4, device="cud
             total_loss += loss.item()
             pbar.set_postfix(loss=loss.item(), mdn=loss_dict["mdn"], pen=loss_dict["pen"])
         print(f"Epoch {epoch} | Avg Loss: {total_loss/len(loader):.4f}")
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             torch.save(model.state_dict(), f"checkpoints/handwriting_epoch{epoch}.pt")
 
     print("✅ Training finished!")
@@ -282,5 +282,5 @@ if __name__ == "__main__":
              "ら": 39, "り": 40, "る": 41, "れ": 42, "ろ": 43,
              "わ": 44, "を": 45, "ん": 46, "。": 47, "、": 48,}  # 必要に応じて拡張
 
-    train_loop("sentences-4dim/oneletters/resampling", vocab, epochs=300, batch_size=512, lr=1e-4,checkpoint_path="checkpoints/handwriting_epoch100.pt")
+    train_loop("sentences-4dim/oneletters/resampling", vocab, epochs=1000, batch_size=512, lr=1e-5,checkpoint_path="sentences-4dim/oneletters/checkpoints/928/handwriting_epoch400.pt")
     
