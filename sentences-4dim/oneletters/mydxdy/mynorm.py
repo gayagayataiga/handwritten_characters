@@ -1,4 +1,4 @@
-
+# 正則化から標準化に変更
 
 import json
 import glob
@@ -33,18 +33,19 @@ for file_path in json_files:
     num_columns = character_data.shape[1]
     features_to_standardize = character_data[:, :num_columns-1]
     touching_flags = character_data[:, num_columns-1]
-    
+
     # 3. 平均(mu)と標準偏差(sigma)を計算
     mu = np.mean(features_to_standardize, axis=0)
     sigma = np.std(features_to_standardize, axis=0)
-    sigma[sigma == 0] = 1 # ゼロ除算を防止
+    sigma[sigma == 0] = 1  # ゼロ除算を防止
 
     # 4. 標準化を適用
     standardized_features = (features_to_standardize - mu) / sigma
 
     # 5. 標準化したデータとフラグを再結合
-    final_data = np.hstack([standardized_features, touching_flags.reshape(-1, 1)])
-        
+    final_data = np.hstack(
+        [standardized_features, touching_flags.reshape(-1, 1)])
+
     # 6. 元のストローク構造に戻す
     strokes_as_list = []
     start_index = 0
