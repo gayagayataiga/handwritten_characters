@@ -281,5 +281,5 @@ if __name__ == "__main__":
              "ら": 39, "り": 40, "る": 41, "れ": 42, "ろ": 43,
              "わ": 44, "を": 45, "ん": 46, "。": 47, "、": 48,}  # 必要に応じて拡張
 
-    train_loop("sentences-4dim/oneletters/mydxdy/addtextids", vocab, epochs=250, batch_size=512, lr=1e-4,checkpoint_path="checkpoints/myresampling/handwriting_epoch150.pt")
+    train_loop("sentences-4dim/oneletters/mydxdy/addtextids", vocab, epochs=400, batch_size=512*2, lr=1e-5,checkpoint_path="checkpoints/myresampling/handwriting_epoch250.pt")
     
