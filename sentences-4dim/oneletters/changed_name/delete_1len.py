@@ -9,16 +9,16 @@ output_folder = "sentences-4dim/oneletters/changed_name_delete1len"
 
 # 画数チェック
 stroke_dict = {
-    "あ": 3,"い": 2,"う": 2,"え": 2,"お": 3,
-    "か": 3,"き": 4,"く": 1,"け": 3,"こ": 2,
-    "さ": 3,"し": 1,"す": 2,"せ": 3,"そ": 1,
-    "た": 4,"ち": 2,"つ": 1,"て": 1,"と": 2,
-    "な": 4,"に": 3,"ぬ": 2,"ね": 2,"の": 1,
-    "は": 3,"ひ": 1,"ふ": 4,"へ": 1,"ほ": 4,
-    "ま": 3,"み": 2,"む": 3,"め": 2,"も": 3,
-    "や": 3,"ゆ": 2,"よ": 2,
-    "ら": 2,"り": 2,"る": 1,"れ": 2,"ろ": 1,
-    "わ": 2,"を": 3,"ん": 1,"。": 1,"、": 1,
+    "あ": 3, "い": 2, "う": 2, "え": 2, "お": 3,
+    "か": 3, "き": 4, "く": 1, "け": 3, "こ": 2,
+    "さ": 3, "し": 1, "す": 2, "せ": 3, "そ": 1,
+    "た": 4, "ち": 2, "つ": 1, "て": 1, "と": 2,
+    "な": 4, "に": 3, "ぬ": 2, "ね": 2, "の": 1,
+    "は": 3, "ひ": 1, "ふ": 4, "へ": 1, "ほ": 4,
+    "ま": 3, "み": 2, "む": 3, "め": 2, "も": 3,
+    "や": 3, "ゆ": 2, "よ": 2,
+    "ら": 2, "り": 2, "る": 1, "れ": 2, "ろ": 1,
+    "わ": 2, "を": 3, "ん": 1, "。": 1, "、": 1,
 }
 
 
@@ -35,7 +35,7 @@ for file_path in json_files:
 
     char = data["text"]
     strokes = data["strokes"]
-    
+
     new_strokes = []
     if char in stroke_dict:
         expected = stroke_dict[char]
@@ -43,19 +43,20 @@ for file_path in json_files:
             print(f"⚠ エラー: {file_path} の '{char}' は画数オーバー "
                   f"(期待={expected}, 実際={len(strokes)})")
 
-
             for stroke in data["strokes"]:          # stroke = 1本の筆跡 (リスト)
-                if len(stroke) < 2:
-                    print(f"⚠ エラー: {file_path} の '{char}' は1画が短すぎます (点数={len(stroke)})")
+                if len(stroke) < 3:
+                    print(
+                        f"⚠ エラー: {file_path} の '{char}' は1画が短すぎます (点数={len(stroke)})")
                 else:
-                    converted = [[p["x"], p["y"], p["time"], p["isTouching"]] for p in stroke]
+                    converted = [[p["x"], p["y"], p["time"],
+                                  p["isTouching"]] for p in stroke]
                     new_strokes.append(converted)
         else:
             new_strokes = [
                 [[p["x"], p["y"], p["time"], p["isTouching"]] for p in stroke]
                 for stroke in data["strokes"]
-                ]
-    
+            ]
+
     data["strokes"] = new_strokes
 
     # 出力ファイルのパスを作成（同じファイル名で保存）
