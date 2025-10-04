@@ -192,12 +192,12 @@ if __name__ == "__main__":
     ).to(device)
 
     model.load_state_dict(torch.load(
-        "checkpoints/myresampling/handwriting_epoch10.pt", map_location=device))
+        "checkpoints/myresampling/handwriting_epoch250.pt", map_location=device))
 
     # strokes = generate_strokes(model, vocab, text="り", max_steps=100, device=device)
     # xy = strokes_to_xy(strokes)
     # plot_strokes(xy)
-    output_folder = "sentences-4dim/oneletters/generated_strokes"
+    output_folder = "sentences-4dim/oneletters/generated_strokes/250"
     os.makedirs(output_folder, exist_ok=True)  # フォルダが存在しない場合は自動で作成
 
     # 3. リストの文字を1つずつループで処理

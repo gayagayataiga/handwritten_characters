@@ -30,7 +30,7 @@ def convert_dict_strokes_to_lists(strokes_in_dict_format):
     strokes_in_list_format = []
     for single_stroke_dicts in strokes_in_dict_format:
         single_stroke_lists = [
-            [p['x'], p['y'], p['time'], p['isTouching']]
+            [p[0], p[1], p[2], p[3]]
             for p in single_stroke_dicts
         ]
         strokes_in_list_format.append(single_stroke_lists)
@@ -99,28 +99,6 @@ def resample_stroke(stroke, num_points):
 
     return resampled_stroke
 
-
-def convert_dict_strokes_to_lists(strokes_in_dict_format):
-    """辞書形式のストロークデータをリスト形式に変換する。"""
-    strokes_in_list_format = []
-    for single_stroke_dicts in strokes_in_dict_format:
-        single_stroke_lists = [
-            [p['x'], p['y'], p['time'], p['isTouching']]
-            for p in single_stroke_dicts
-        ]
-        strokes_in_list_format.append(single_stroke_lists)
-    return strokes_in_list_format
-
-
-def remove_consecutive_duplicates(points):
-    """点のリストから、連続する重複点を除去します。"""
-    if not points:
-        return []
-    cleaned_points = [points[0]]
-    for i in range(1, len(points)):
-        if points[i] != cleaned_points[-1]:
-            cleaned_points.append(points[i])
-    return cleaned_points
 
 
 def resample_stroke(stroke, num_points):
@@ -388,7 +366,7 @@ def process_files_in_folder(input_dir, output_dir, num_augmentations):
 # --- メインの実行部分 ---
 if __name__ == '__main__':
     # フォルダのパスを指定
-    input_folder = 'sentences-4dim/oneletters/changed_name'
+    input_folder = 'sentences-4dim/oneletters/mydxdy/checklength'
     output_folder = 'sentences-4dim/oneletters/resampling'
     
     # 1つのオリジナルファイルから生成する拡張データの数を指定
